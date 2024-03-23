@@ -1,25 +1,31 @@
 // Require the necessary Discord.js classes
-const { Client, Events, GatewayIntentBits, IntentsBitField } = require('discord.js');
+const { Client, Events, GatewayIntentBits, IntentsBitField, SlashCommandAssertions, SlashCommandBuilder } = require('discord.js');
 
 // Require other modules
 const fs = require('fs');
 const https = require('https');
 const path = require('path');
 const { token } = require('./config.json');
-const { fetchMedia } = require('./MediaFetch');
+const statsFilePath = './fileRequestStats.json';
 
 // Define variables
 const mediaFolder = './media'; // Folder containing saved/uploaded media
 const commandPrefix = "dz"; // Command prefix
 let fileList = []; // List of files
 let fileListNoExt = []; // List of files without extensions
+let fileRequestCount = {};
 
 // Acquire list of files in media folder
 if (fs.existsSync(mediaFolder)) {
   fileList = fs.readdirSync(mediaFolder);
   fileListNoExt = fileList.map(file => path.parse(file).name.toLowerCase());
 }
-console.log(fileListNoExt);
+
+// Load existing statistics from the file
+if (fs.existsSync(statsFilePath)) {
+  const statsFileContent = fs.readFileSync(statsFilePath, 'utf-8');
+  fileRequestCount = JSON.parse(statsFileContent);
+}
 
 // Create a new client instance
 const client = new Client({
@@ -40,7 +46,9 @@ client.on('error', (error) => {
   console.error('Bot encountered an error:', error);
 });
 
+
 client.on('messageCreate', (message) => {
+
   // Ignore messages from bots and messages without content
   if (message.author.bot || !message.content.startsWith(commandPrefix)) {
     return;
@@ -51,13 +59,25 @@ client.on('messageCreate', (message) => {
   const mediaIdx = fileListNoExt.indexOf(botCommand);
   const mediaName = mediaIdx > -1 ? fileList[mediaIdx] : null;
 
+  // Update file request count
+  if (mediaName) {
+    fileRequestCount[mediaName]++;
+    const statsFileContent = JSON.stringify(fileRequestCount, null, 2);
+    fs.writeFileSync(statsFilePath, statsFileContent, 'utf-8');
+  }
+
+  const ping = new SlashCommandBuilder()
+      .setName('list')
+      .setDescription('test list');
+  client.application.commands.create(ping);
+
   switch (botCommand) {
     case "help":
       message.reply(`What do you need help with?\nThese are the available commands I have:\n\`\`\`Help:    \t\tdz help\nMedia list:\t  dz list\nPost media:\t  dz [media name]\n\n**MOD ONLY**\nUpload media:\tdz upload [attachment]\nRename media:\tdz rename [old name] [new name]\`\`\``);
       break;
 
     case "list":
-      message.reply(`These are the available media:\n${fileListNoExt.join(', ')}`);
+      message.reply(`These are the available media:\n${fileListNoExt.join('\n')}`);
       break;
 
     case "upload":
@@ -71,13 +91,22 @@ client.on('messageCreate', (message) => {
     case "delete":
       deleteCommand(message, args);
       break;
-
+    case "stats":
+      showStatsCommand(message);
+      break;
     default:
-      //console.log("SKIP");
       if (mediaName) message.reply({ files: [`${mediaFolder}/${mediaName}`] });
       break;
   }
+
 });
+
+client.on('interactionCreate', (interaction) => {
+  if(!interaction.isChatInputCommand()) return;
+  if(interaction.commandName==='list'){
+    interaction.reply({content:`These are the available media:\n${fileListNoExt.join('\n')}`, ephemeral: true})
+  }
+})
 
 function uploadCommand(message, args) {
   const userPreferredName = args[2]?.toLowerCase();
@@ -92,6 +121,12 @@ function uploadCommand(message, args) {
 
   if (!fs.existsSync(mediaFolder)) {
     fs.mkdirSync(mediaFolder);
+  }
+
+  // Check if the file already exists
+  if (fs.existsSync(newFilePath)) {
+    message.reply(`${newFileName} already exists. Please choose a different name.`);
+    return;
   }
 
   const file = fs.createWriteStream(newFilePath);
@@ -115,13 +150,19 @@ function renameCommand(message, args) {
     message.reply("Please provide both the old and new names for renaming.");
     return;
   }
-
+  
   const oldIdx = fileListNoExt.indexOf(oldName);
   if (oldIdx > -1) {
     const oldFile = fileList[oldIdx];
     const newFile = `${newName}${path.extname(oldFile)}`;
     const oldFilePath = path.join(mediaFolder, oldFile);
     const newFilePath = path.join(mediaFolder, newFile);
+
+    // Check if the new file name already exists
+    if (fs.existsSync(newFilePath)) {
+      message.reply(`${newFile} already exists. Please choose a different new name.`);
+      return;
+    }
 
     fs.renameSync(oldFilePath, newFilePath);
 
@@ -176,7 +217,34 @@ function updateFileList() {
   fileList = fs.readdirSync(mediaFolder);
   fileListNoExt = fileList.map(file => path.parse(file).name.toLowerCase());
   console.log("Updated fileListNoExt:", fileListNoExt);
+  
+  // Initialize or update file request count for new or existing files
+  fileList.forEach(file => {
+    if (!fileRequestCount[file]) {
+      fileRequestCount[file] = 0;
+    }
+  });
 }
+
+function showStatsCommand(message) {
+  const sortedStats = Object.entries(fileRequestCount)
+    .sort(([, countA], [, countB]) => countB - countA); // Sort entries by count in descending order
+
+  const statsMessage = sortedStats
+    .map(([file, count]) => `${file}:${count}`)
+    .join('\n');
+
+  message.reply(`Statistics (All-time)\n\`\`\`${statsMessage}\`\`\``);
+}
+
+// Function to save file request statistics to the file
+function saveStatsToFile() {
+  const statsFileContent = JSON.stringify(fileRequestCount, null, 2);
+  fs.writeFileSync(statsFilePath, statsFileContent, 'utf-8');
+}
+
+// Save statistics to the file periodically
+setInterval(saveStatsToFile, 3600000);  // 1 hour interval
 
 // Log in to Discord with client token
 client.login(token);
