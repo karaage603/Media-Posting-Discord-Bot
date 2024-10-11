@@ -10,8 +10,8 @@ let fileListNoExt = fileList.map(file => path.parse(file).name.toLowerCase());
 function returnFile(message, args) {
     const mediaIdx = fileListNoExt.indexOf(args);
     const mediaName = mediaIdx > -1 ? fileList[mediaIdx] : null;
-    if(mediaName) message.reply({ files: [`${mediaFolder}/${mediaName}`] });
-    else message.reply("File not found. Use `dz list` to check available files.");
+    if(mediaName) message.channel.send({ files: [`${mediaFolder}/${mediaName}`] });
+    else message.channel.send("File not found. Use `dz list` to check available files.");
 }
 
 // Update the file list
@@ -22,16 +22,16 @@ function updateFileList() {
 
 // List all media files
 function listMediaCommand(message) {
-    message.reply(`These are the available media:\n${fileListNoExt.join('\n')}`);
+    message.channel.send(`These are the available media:\n${fileListNoExt.join('\n')}`);
 }
 
 // Upload media file
 function uploadCommand(message, args) {
     if (!hasPermission(message)) return;
 
-    const userPreferredName = args[2]?.toLowerCase();
+    const userPreferredName = args[1]?.toLowerCase();
     if (!userPreferredName || message.author.bot || message.attachments.size === 0) {
-        message.reply("Please specify a valid name and provide an attachment");
+        message.channel.send("Please specify a valid name and provide an attachment");
         return;
     }
 
@@ -44,7 +44,7 @@ function uploadCommand(message, args) {
     }
 
     if (fs.existsSync(newFilePath)) {
-        message.reply(`${newFileName} already exists. Please choose a different name.`);
+        message.channel.send(`${newFileName} already exists. Please choose a different name.`);
         return;
     }
 
@@ -54,7 +54,7 @@ function uploadCommand(message, args) {
         file.on('finish', () => {
         file.close();
         updateFileList();
-        message.reply(`Media saved as: ${newFilePath}`);
+        message.channel.send(`Media saved as: ${newFilePath}`);
         });
     });
 }
@@ -63,8 +63,14 @@ function uploadCommand(message, args) {
 function renameCommand(message, args) {
     if (!hasPermission(message)) return;
     
-    const oldName = args[2]?.toLowerCase();
-    const newName = args[3]?.toLowerCase();
+    // Check if both old name and new name are provided
+    if (args.length < 3) {
+        message.channel.send("Please specify both the old name and the new name.");
+        return;
+    }
+
+    const oldName = args[1]?.toLowerCase();
+    const newName = args[2]?.toLowerCase();
     
     const oldIdx = fileListNoExt.indexOf(oldName);
     if (oldIdx > -1) {
@@ -74,15 +80,15 @@ function renameCommand(message, args) {
         const newFilePath = path.join(mediaFolder, newFile);
 
         if (fs.existsSync(newFilePath)) {
-        message.reply(`${newFile} already exists. Please choose a different new name.`);
+        message.channel.send(`${newFile} already exists. Please choose a different new name.`);
         return;
         }
 
         fs.renameSync(oldFilePath, newFilePath);
         updateFileList();
-        message.reply(`File renamed from ${oldFile} to ${newFile}`);
+        message.channel.send(`File renamed from ${oldFile} to ${newFile}`);
     } else {
-        message.reply(`File with the name ${oldName} not found.`);
+        message.channel.send(`File with the name ${oldName} not found.`);
     }
 }
 
@@ -90,24 +96,24 @@ function renameCommand(message, args) {
 function deleteCommand(message, args) {
     if (!hasPermission(message)) return;
 
-    const fileNameToDelete = args[2]?.toLowerCase();
+    const fileNameToDelete = args[1]?.toLowerCase();
     const fileToDeleteIdx = fileListNoExt.indexOf(fileNameToDelete);
     const fileToDelete = fileToDeleteIdx > -1 ? fileList[fileToDeleteIdx] : null;
 
     if (!fileToDelete) {
-        message.reply(`File with the name ${fileNameToDelete} not found.`);
+        message.channel.send(`File with the name ${fileNameToDelete} not found.`);
         return;
     }
 
     fs.unlinkSync(path.join(mediaFolder, fileToDelete));
     updateFileList();
-    message.reply(`File ${fileToDelete} has been successfully deleted.`);
+    message.channel.send(`File ${fileToDelete} has been successfully deleted.`);
 }
 
 // Permission check function
 function hasPermission(message) {
     if (!message.member.permissions.has(['ADMINISTRATOR', 'MANAGE_MESSAGES'])) {
-        message.reply("You don't have permission to use this command.");
+        message.channel.send("You don't have permission to use this command.");
         return false;
     }
     return true;

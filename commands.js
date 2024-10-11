@@ -2,18 +2,19 @@ const { returnFile, uploadCommand, renameCommand, deleteCommand, listMediaComman
 const { listClubs, joinClub, pingClub } = require('./clubs');
 
 // Command Prefix
-const commandPrefix = "dz";
+const commandPrefix = ".";
 
 // Handle incoming commands
 function handleCommand(client, message) {
   if (message.author.bot || !message.content.startsWith(commandPrefix)) return;
 
-  const args = message.content.split(' ');
-  const botCommand = args[1]?.toLowerCase();
-    console.log(botCommand)
+  // Remove the prefix and split the command and its arguments
+  const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
+  const botCommand = args[0]?.toLowerCase();
+  
   switch (botCommand) {
     case "help":
-      message.reply(getHelpMessage());
+      message.channel.send(getHelpMessage());
       break;
     case "list":
       listMediaCommand(message);
@@ -39,7 +40,7 @@ function handleCommand(client, message) {
       pingClub(message, clubToPing);
       break;
     default:
-      returnFile(message, args[1]);  
+      returnFile(message, args[0]);  
       break;
   }
 }
@@ -49,13 +50,13 @@ function getHelpMessage() {
   return `What do you need help with?
   These are the available commands I have:
   \`\`\`
-  Help:    \t\tdz help
-  Media list:\t  dz list
-  Post media:\t  dz [media name]
+  Help:    \t\t.help
+  Media list:\t  .list
+  Post media:\t  .[media name]
   
   **MOD ONLY**
-  Upload media:\tdz upload [attachment]
-  Rename media:\tdz rename [old name] [new name]
+  Upload media:\t.upload [attachment]
+  Rename media:\t.rename [old name] [new name]
   \`\`\``;
 }
 

@@ -4,20 +4,20 @@ let clubs = {};
 function listClubs(message) {
   const clubNames = Object.keys(clubs);
   if (clubNames.length === 0) {
-    message.reply("There are currently no clubs available.");
+    message.channel.send("There are currently no clubs available.");
     return;
   }
   const clubList = clubNames.map(clubName => {
     const memberCount = clubs[clubName].length;
     return `${clubName}: ${memberCount} member(s)`;
   }).join('\n');
-  message.reply(`Available clubs:\n\`\`\`${clubList}\`\`\``);
+  message.channel.send(`Available clubs:\n\`\`\`${clubList}\`\`\``);
 }
 
 // Join a club
 function joinClub(message, clubName) {
   if (!clubName) {
-    message.reply("Please specify a club name.");
+    message.channel.send("Please specify a club name.");
     return;
   }
   const userId = message.author.id;
@@ -25,17 +25,17 @@ function joinClub(message, clubName) {
     clubs[clubName] = [];
   }
   if (clubs[clubName].includes(userId)) {
-    message.reply(`You are already a member of ${clubName} club.`);
+    message.channel.send(`You are already a member of ${clubName} club.`);
   } else {
     clubs[clubName].push(userId);
-    message.reply(`You have joined the ${clubName} club.`);
+    message.channel.send(`You have joined the ${clubName} club.`);
   }
 }
 
 // Ping a club
 function pingClub(message, clubName) {
   if (!clubs[clubName]) {
-    message.reply(`${clubName} doesn't exist.`);
+    message.channel.send(`${clubName} doesn't exist.`);
     return;
   }
   const clubMembers = clubs[clubName].map(id => `<@${id}>`).join(', ');
