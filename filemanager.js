@@ -11,7 +11,7 @@ function returnFile(message, args) {
     const mediaIdx = fileListNoExt.indexOf(args);
     const mediaName = mediaIdx > -1 ? fileList[mediaIdx] : null;
     if(mediaName) message.channel.send({ files: [`${mediaFolder}/${mediaName}`] });
-    else message.channel.send("File not found. Use `dz list` to check available files.");
+    //else message.channel.send("File not found. Use `.list` to check available files.");
 }
 
 // Update the file list

@@ -1,4 +1,4 @@
-const { returnFile, uploadCommand, renameCommand, deleteCommand, listMediaCommand } = require('./fileManager');
+const { returnFile, uploadCommand, renameCommand, deleteCommand, listMediaCommand } = require('./filemanager');
 const { listClubs, joinClub, pingClub } = require('./clubs');
 
 // Command Prefix
@@ -55,8 +55,9 @@ function getHelpMessage() {
   Post media:\t  .[media name]
   
   **MOD ONLY**
-  Upload media:\t.upload [attachment]
+  Upload media:\t.upload [media name] <attachment>
   Rename media:\t.rename [old name] [new name]
+  Delete media:\t.delete [media name]
   \`\`\``;
 }
 
