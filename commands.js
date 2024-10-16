@@ -1,54 +1,68 @@
-const { returnFile, uploadCommand, renameCommand, deleteCommand, listMediaCommand } = require('./filemanager');
-const { listClubs, joinClub, pingClub } = require('./clubs');
+const fm = require('./filemanager');
+const club = require('./clubs');
+let config = require('./config.json');
 
-// Command Prefix
-const commandPrefix = ".";
+// Checking if a user has been muted by mods
+function checkIfMuted(message) {
+  const regex = /(?:muted|silenced).*(?:for now|temporarily|permanently).*Reason:/i;
+  if (message.author.id == config.MODERATION_BOT_ID && regex.test(message)) {
+    fm.returnFile(message, config.MediaForMutedUsers, true); //
+  }
+}
 
 // Handle incoming commands
-function handleCommand(client, message) {
-  if (message.author.bot || !message.content.startsWith(commandPrefix)) return;
+function handleCommand(message) {
+
+  if (message.author.bot || !message.content.startsWith(config.commandPrefix)) return;
 
   // Remove the prefix and split the command and its arguments
-  const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
+  const args = message.content.slice(config.commandPrefix.length).trim().split(/ +/);
   const botCommand = args[0]?.toLowerCase();
-  
+
   switch (botCommand) {
     case "help":
       message.channel.send(getHelpMessage());
       break;
     case "list":
-      listMediaCommand(message);
+      fm.listMediaCommand(message);
       break;
     case "upload":
-      uploadCommand(message, args);
+      fm.uploadCommand(message, args);
       break;
     case "rename":
-      renameCommand(message, args);
+      fm.renameCommand(message, args);
       break;
     case "delete":
-      deleteCommand(message, args);
+      fm.deleteCommand(message, args);
       break;
+    case "create":
+      club.createClub(message, args);
     case "clublist":
-      listClubs(message);
+      club.listClubs(message);
       break;
     case "join":
       const clubName = args[2];
-      joinClub(message, clubName);
+      club.joinClub(message, clubName);
       break;
-    case "club":
+    case "ping":
       const clubToPing = args[2];
-      pingClub(message, clubToPing);
+      club.pingClub(message, clubToPing);
+      break;
+    case "setid":
+      fm.setModBotID(message, args);
+      break;
+    case "setmutemedia":
+      fm.setMuteMedia(message, args);
       break;
     default:
-      returnFile(message, args[0]);  
+      fm.returnFile(message, args);
       break;
   }
 }
 
 // Help message function
 function getHelpMessage() {
-  return `What do you need help with?
-  These are the available commands I have:
+  return `These are the available commands I have:
   \`\`\`
   Help:    \t\t.help
   Media list:\t  .list
@@ -61,4 +75,4 @@ function getHelpMessage() {
   \`\`\``;
 }
 
-module.exports = { handleCommand };
+module.exports = { handleCommand, checkIfMuted };

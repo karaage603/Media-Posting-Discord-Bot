@@ -3,10 +3,10 @@ const token = process.env.BOT_TOKEN;
 
 // Require the necessary Discord.js classes
 const { Client, Events, IntentsBitField } = require('discord.js');
+let config = require('./config.json');
 
 // Import other modules
-const { handleCommand } = require('./commands');
-// const { saveStatsToFile } = require('./statsManager');
+const { handleCommand, checkIfMuted } = require('./commands');
 
 // Create a new client instance
 const client = new Client({
@@ -28,7 +28,8 @@ client.on('error', (error) => {
 
 // Handle messages
 client.on('messageCreate', (message) => {
-  handleCommand(client, message); // Delegate message handling to command handler
+  checkIfMuted(message);
+  handleCommand(message); // Delegate message handling to command handler
 });
 
 // Log in to Discord with client token
